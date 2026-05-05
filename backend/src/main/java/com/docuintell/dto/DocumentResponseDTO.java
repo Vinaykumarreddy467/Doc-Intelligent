@@ -11,6 +11,7 @@ public class DocumentResponseDTO {
     private String status;
     private String documentType;
     private Double confidence;
+    private String extractedText;
     private String summary;
     private Double validationScore;
     private Boolean isValid;
@@ -69,6 +70,14 @@ public class DocumentResponseDTO {
     
     public void setDocumentType(String documentType) {
         this.documentType = documentType;
+    }
+    
+    public String getExtractedText() {
+        return extractedText;
+    }
+    
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
     }
     
     public Double getConfidence() {

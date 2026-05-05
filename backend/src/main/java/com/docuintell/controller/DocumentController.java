@@ -185,6 +185,7 @@ public class DocumentController {
         dto.setStatus(document.getStatus());
         dto.setDocumentType(document.getDocumentType());
         dto.setConfidence(document.getConfidence());
+        dto.setExtractedText(document.getExtractedText());
         dto.setSummary(document.getSummary());
         dto.setValidationScore(document.getValidationScore());
         dto.setIsValid(document.getIsValid());
