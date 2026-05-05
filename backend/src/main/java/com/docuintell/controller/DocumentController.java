@@ -122,6 +122,40 @@ public class DocumentController {
         }
     }
     
+    @PutMapping("/{id}/verify")
+    public ResponseEntity<ApiResponse<DocumentResponseDTO>> verifyDocument(
+            @PathVariable String id,
+            @RequestBody Map<String, String> request) {
+        try {
+            Document document = documentService.getDocument(id)
+                    .orElseThrow(() -> new Exception("Document not found"));
+            
+            String extractedText = request.get("extractedText");
+            String summary = request.get("summary");
+            String documentType = request.get("documentType");
+            
+            if (extractedText != null) {
+                document.setExtractedText(extractedText);
+            }
+            if (summary != null) {
+                document.setSummary(summary);
+            }
+            if (documentType != null) {
+                document.setDocumentType(documentType);
+            }
+            
+            document.setStatus("processed");
+            document.setIsValid(true);
+            document.setUpdatedAt(java.time.LocalDateTime.now());
+            
+            documentService.saveDocument(document);
+            return ResponseEntity.ok(ApiResponse.success("Document verified", toDTO(document)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteDocument(@PathVariable String id) {
         documentService.deleteDocument(id);

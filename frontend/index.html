@@ -321,6 +321,209 @@
             font-size: 3rem;
             margin-bottom: 1rem;
         }
+        
+        /* Verification Modal Styles */
+        .verify-modal .modal-content {
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .verify-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .verify-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+        
+        .verify-header .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .verify-header .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .verify-body {
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .verify-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .verify-meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .verify-meta-item .meta-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 0.25rem;
+        }
+        
+        .verify-meta-item .meta-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .verify-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .verify-section label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .verify-section label .edit-hint {
+            font-weight: 400;
+            color: #999;
+            font-size: 0.8rem;
+        }
+        
+        .verify-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+            background: #fafbfc;
+        }
+        
+        .verify-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .verify-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: #fafbfc;
+            cursor: pointer;
+        }
+        
+        .verify-select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .verify-footer {
+            padding: 1rem 2rem 1.5rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        
+        .btn-verify {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-verify:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-verify:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-cancel-verify {
+            background: #e5e7eb;
+            color: #333;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-cancel-verify:hover {
+            background: #d1d5db;
+        }
+        
+        .verify-success {
+            display: none;
+            background: #d1fae5;
+            color: #065f46;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        
+        .verify-success.active {
+            display: block;
+        }
+        
+        .btn-verify-action {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-verify-action:hover {
+            background: #059669;
+        }
     </style>
 </head>
 <body>
@@ -453,8 +656,68 @@
         </div>
     </div>
 
+    <!-- Verification Modal -->
+    <div class="modal verify-modal" id="verify-modal">
+        <div class="modal-content">
+            <div class="verify-header">
+                <h3>Verify Document</h3>
+                <button class="close-btn" onclick="closeVerifyModal()">&times;</button>
+            </div>
+            <div class="verify-body">
+                <div class="verify-success" id="verify-success">
+                    Document verified successfully!
+                </div>
+                <div class="verify-meta" id="verify-meta">
+                    <div class="verify-meta-item">
+                        <span class="meta-label">Filename</span>
+                        <span class="meta-value" id="verify-filename">-</span>
+                    </div>
+                    <div class="verify-meta-item">
+                        <span class="meta-label">File Size</span>
+                        <span class="meta-value" id="verify-filesize">-</span>
+                    </div>
+                    <div class="verify-meta-item">
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value" id="verify-status">-</span>
+                    </div>
+                    <div class="verify-meta-item">
+                        <span class="meta-label">Confidence</span>
+                        <span class="meta-value" id="verify-confidence">-</span>
+                    </div>
+                </div>
+                <div class="verify-section">
+                    <label>Document Type <span class="edit-hint">(editable)</span></label>
+                    <select class="verify-select" id="verify-doc-type">
+                        <option value="invoice">Invoice</option>
+                        <option value="receipt">Receipt</option>
+                        <option value="contract">Contract</option>
+                        <option value="purchase_order">Purchase Order</option>
+                        <option value="resume">Resume</option>
+                        <option value="report">Report</option>
+                        <option value="email">Email</option>
+                        <option value="form">Form</option>
+                        <option value="letter">Letter</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="verify-section">
+                    <label>Extracted Content <span class="edit-hint">(editable)</span></label>
+                    <textarea class="verify-textarea" id="verify-text" placeholder="Document content will appear here..."></textarea>
+                </div>
+                <div class="verify-section">
+                    <label>Summary <span class="edit-hint">(editable)</span></label>
+                    <textarea class="verify-textarea" id="verify-summary" style="min-height: 100px;" placeholder="Document summary..."></textarea>
+                </div>
+            </div>
+            <div class="verify-footer">
+                <button class="btn-cancel-verify" onclick="closeVerifyModal()">Cancel</button>
+                <button class="btn-verify" id="verify-save-btn" onclick="saveVerification()">Save & Verify</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const API_BASE = 'http://localhost:8080/api';
+        const API_BASE = 'http://localhost:8082/api';
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -529,6 +792,7 @@
                             <td>${new Date(doc.createdAt).toLocaleDateString()}</td>
                             <td class="actions">
                                 <button class="btn btn-secondary" onclick="viewDocument('${doc.id}')">View</button>
+                                <button class="btn btn-verify-action" onclick="openVerify('${doc.id}')">Verify</button>
                                 ${doc.status === 'needs_review' ? `<button class="btn btn-primary" onclick="openReview('${doc.id}')">Review</button>` : ''}
                                 <button class="btn btn-danger" onclick="deleteDocument('${doc.id}')">Delete</button>
                             </td>
@@ -707,6 +971,114 @@
                 console.error('Search error:', e);
             }
         }
+        
+        // Verification Modal Functions
+        function openVerify(id) {
+            fetch(`${API_BASE}/documents/${id}`)
+                .then(r => r.json())
+                .then(json => {
+                    if (json.success) {
+                        var doc = json.data;
+                        document.getElementById('verify-filename').textContent = doc.filename || '-';
+                        document.getElementById('verify-filesize').textContent = formatFileSize(doc.fileSize);
+                        document.getElementById('verify-status').textContent = doc.status || '-';
+                        document.getElementById('verify-confidence').textContent = doc.confidence ? (doc.confidence * 100).toFixed(0) + '%' : '-';
+                        document.getElementById('verify-doc-type').value = doc.documentType || 'other';
+                        document.getElementById('verify-text').value = doc.extractedText || '';
+                        document.getElementById('verify-summary').value = doc.summary || '';
+                        document.getElementById('verify-success').classList.remove('active');
+                        document.getElementById('verify-save-btn').disabled = false;
+                        document.getElementById('verify-save-btn').textContent = 'Save & Verify';
+                        // Store doc ID directly
+                        document.getElementById('verify-modal').setAttribute('data-doc-id', id);
+                        document.getElementById('verify-modal').classList.add('active');
+                    }
+                })
+                .catch(function(e) {
+                    console.error('Verify load error:', e);
+                });
+        }
+        
+        function closeVerifyModal() {
+            document.getElementById('verify-modal').classList.remove('active');
+        }
+        
+        async function saveVerification() {
+            var docId = document.getElementById('verify-modal').getAttribute('data-doc-id');
+            if (!docId) {
+                alert('Could not find document ID');
+                return;
+            }
+            
+            var docType = document.getElementById('verify-doc-type').value;
+            var extractedText = document.getElementById('verify-text').value;
+            var summary = document.getElementById('verify-summary').value;
+            
+            var saveBtn = document.getElementById('verify-save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            try {
+                var response = await fetch(`${API_BASE}/documents/${docId}/verify`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        documentType: docType,
+                        extractedText: extractedText,
+                        summary: summary
+                    })
+                });
+                
+                var json = await response.json();
+                
+                if (json.success) {
+                    document.getElementById('verify-success').classList.add('active');
+                    saveBtn.textContent = 'Verified!';
+                    loadDocuments();
+                    loadStats();
+                    setTimeout(function() {
+                        closeVerifyModal();
+                    }, 1500);
+                } else {
+                    alert('Verification failed: ' + (json.message || 'Unknown error'));
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save & Verify';
+                }
+            } catch (e) {
+                console.error('Verify error:', e);
+                alert('Verification failed: ' + e.message);
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save & Verify';
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (!bytes) return '-';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        // Close modals on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeVerifyModal();
+                closeModal();
+            }
+        });
+        
+        // Close modals on backdrop click
+        document.getElementById('verify-modal').addEventListener('click', function(e) {
+            if (e.target === document.getElementById('verify-modal')) {
+                closeVerifyModal();
+            }
+        });
+        
+        document.getElementById('review-modal').addEventListener('click', function(e) {
+            if (e.target === document.getElementById('review-modal')) {
+                closeModal();
+            }
+        });
     </script>
 </body>
 </html>

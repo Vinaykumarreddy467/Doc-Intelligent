@@ -124,6 +124,10 @@ public class DocumentService {
         documentRepository.deleteById(id);
     }
     
+    public Document saveDocument(Document document) {
+        return documentRepository.save(document);
+    }
+    
     public Long countByStatus(String status) {
         return documentRepository.countByStatus(status);
     }
