@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -27,10 +28,22 @@ public class AIClientService {
     @Value("${ai.service.url}")
     private String aiServiceUrl;
     
+    @Value("${ai.service.timeout:600000}")
+    private Integer timeout;
+    
     public AIClientService() {
         this.objectMapper = new ObjectMapper();
         this.restTemplate = new RestTemplate();
         logger.info("AIClientService initialized");
+    }
+    
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(timeout);
+        factory.setReadTimeout(timeout);
+        this.restTemplate.setRequestFactory(factory);
+        logger.info("AIClientService timeout set to {}ms", timeout);
     }
     
     public DocumentService.ProcessingResponse processDocument(MultipartFile file) throws IOException {

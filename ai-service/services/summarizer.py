@@ -25,7 +25,7 @@ Summary:"""
                     "num_predict": 200
                 }
             },
-            timeout=60.0
+            timeout=300.0
         )
         result = response.json()
         return result.get("response", "").strip()

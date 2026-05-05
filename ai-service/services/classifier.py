@@ -33,7 +33,7 @@ Response:"""
                     "num_predict": 100
                 }
             },
-            timeout=60.0
+            timeout=300.0
         )
         result = response.json()
         response_text = result.get("response", "")
