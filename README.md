@@ -21,6 +21,51 @@ User → [Upload Document: PDF / DOCX / TXT / CSV / Images]
 | Frontend     | Static HTML + Vanilla JS            |
 | LLM          | Ollama (phi3, mistral, llama3.1, etc.) |
 
+## System Requirements
+
+### Minimum Requirements
+
+| Component | Requirement |
+|-----------|-------------|
+| **OS** | Linux (Ubuntu 22.04+), macOS, Windows 10+ |
+| **CPU** | 4 cores (8+ recommended for LLM inference) |
+| **RAM** | 8 GB minimum (16 GB recommended) |
+| **Disk** | 20 GB free space |
+| **Python** | 3.10 or higher |
+| **Java** | 17 or higher (JDK) |
+| **Maven** | 3.8+ |
+
+### Model-Specific RAM Requirements
+
+| Model | RAM Needed | Disk Space |
+|-------|-----------|------------|
+| `tinyllama` | 2 GB | 637 MB |
+| `phi3` | 4 GB | 2.2 GB |
+| `llama3.2:3b` | 4 GB | 2.0 GB |
+| `mistral:7b` | 8 GB | 4.4 GB |
+| `llama3.1:8b` | 10 GB | 4.9 GB |
+
+> **Note:** Ollama loads the model into RAM. Ensure you have enough free RAM for both the model and the rest of the system.
+
+### OCR Support (Optional)
+
+For image/PDF-with-images text extraction, install the system OCR engine:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install tesseract-ocr
+```
+
+**macOS:**
+```bash
+brew install tesseract
+```
+
+**Windows:**
+Download from [tesseract-ocr GitHub](https://github.com/tesseract-ocr/tesseract) and add to PATH.
+
+Python dependencies (`Pillow`, `pytesseract`) are included in `requirements.txt` and install automatically.
+
 ## Quick Start
 
 ### Prerequisites
@@ -201,7 +246,7 @@ spring.mvc.async.request-timeout=900000
 ## Processing Pipeline
 
 1. **Upload** → User uploads file via frontend
-2. **Text Extraction** → Instant (PyPDF2 for PDF, docx2txt for DOCX, raw reader for TXT/CSV)
+2. **Text Extraction** → Instant (PyPDF2 for PDF, docx2txt for DOCX, pytesseract for images, raw reader for TXT/CSV)
 3. **Classification** → Ollama identifies document type (invoice, contract, resume, etc.)
 4. **Field Extraction** → Ollama extracts structured fields from the document
 5. **Summarization** → Ollama generates a 2-3 sentence summary
@@ -244,13 +289,14 @@ docuintell/
 
 ## Supported File Types
 
-| Type | Extensions | Extractor |
-|------|-----------|-----------|
-| Plain Text | `.txt`, `.md` | Built-in |
-| PDF | `.pdf` | PyPDF2 |
-| Word | `.docx`, `.doc` | docx2txt |
-| CSV | `.csv` | Built-in csv module |
-| Images | `.jpg`, `.png`, `.tiff` | pytesseract (optional) |
+| Type | Extensions | Extractor | Status |
+|------|-----------|-----------|--------|
+| Plain Text | `.txt`, `.md` | Built-in | ✅ Always |
+| PDF | `.pdf` | PyPDF2 | ✅ Always |
+| Word | `.docx`, `.doc` | docx2txt | ✅ Always |
+| CSV | `.csv` | Built-in csv module | ✅ Always |
+| Images | `.jpg`, `.png`, `.tiff`, `.bmp` | pytesseract + Pillow | ✅ Requires `tesseract-ocr` system package |
+| PDF with Images | `.pdf` (scanned) | PyPDF2 + pytesseract | ✅ Requires `tesseract-ocr` system package |
 
 ## License
 
