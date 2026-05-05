@@ -58,12 +58,27 @@ public class DocumentService {
             document.setValidationScore(response.getValidation().getScore());
             document.setIsValid(response.getValidation().getIsValid());
             document.setValidationIssues(String.join("; ", response.getValidation().getIssues()));
-            document.setStatus(response.getStatus());
+            
+            // Determine status based on confidence and validation
+            Double confidence = response.getClassification().getConfidence();
+            Boolean isValid = response.getValidation().getIsValid();
+            List<String> issues = response.getValidation().getIssues();
+            
+            if (confidence != null && confidence < 0.7) {
+                document.setStatus("needs_review");
+            } else if (isValid != null && !isValid) {
+                document.setStatus("needs_review");
+            } else if (issues != null && !issues.isEmpty()) {
+                document.setStatus("needs_review");
+            } else {
+                document.setStatus("processed");
+            }
+            
             document.setUpdatedAt(LocalDateTime.now());
             
         } catch (Exception e) {
             logger.error("AI processing failed: {}", e.getMessage());
-            document.setStatus("failed");
+            document.setStatus("needs_review");
             document.setValidationIssues("AI processing failed: " + e.getMessage());
             document.setUpdatedAt(LocalDateTime.now());
         }
