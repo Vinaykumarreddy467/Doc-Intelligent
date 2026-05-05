@@ -1,205 +1,257 @@
 # DocuIntell - Intelligent Document Processing System
 
-A full-stack POC for intelligent document processing using AI (Ollama), Spring Boot, and Angular.
+A full-stack POC for intelligent document processing using AI (Ollama), Spring Boot, and a lightweight frontend.
 
 ## Architecture
 
 ```
-User → [Document Acquisition: File / Scan / Email]
-     → [Intelligence: Preprocessing, Classification, Extraction, Summarization]
-     → [Validation: Verify structured data]
-          → YES → [Storage / Integration]
-          → NO  → [Redirect to User for Review]
+User → [Upload Document: PDF / DOCX / TXT / CSV / Images]
+     → [Text Extraction: PyPDF2 / docx2txt / raw reader]
+     → [AI Processing via Ollama: Classification → Extraction → Summarization]
+     → [Verification Modal: Review & Edit AI results]
+          → Save → [Database: H2 in-memory]
 ```
 
 ## Tech Stack
 
-| Layer        | Technology                                  |
-|--------------|---------------------------------------------|
-| AI Service   | Python 3.11 + FastAPI + Ollama (llama3.1:8b)|
-| Vector DB    | ChromaDB (local, persistent, CPU-friendly)  |
-| Backend      | Java 17 + Spring Boot 3.2 + MySQL 8         |
-| Frontend     | Angular 17 + Angular Material               |
-| Auth         | JWT (jjwt 0.11.5)                           |
+| Layer        | Technology                          |
+|--------------|-------------------------------------|
+| AI Service   | Python 3.14 + FastAPI + Ollama      |
+| Backend      | Java 17 + Spring Boot 3.2 + H2      |
+| Frontend     | Static HTML + Vanilla JS            |
+| LLM          | Ollama (phi3, mistral, llama3.1, etc.) |
 
 ## Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Prerequisites
 
-1. **Prerequisites:**
-   - Docker and Docker Compose installed
-   - Ollama installed with `llama3.1:8b` model
-
-2. **Setup Ollama:**
+1. **Ollama** installed and running:
    ```bash
-   ollama pull llama3.1:8b
    ollama serve
    ```
 
-3. **Run the application:**
+2. **Pull a model** (phi3 recommended for CPU):
    ```bash
-   cd docuintell
-   docker-compose up -d
+   ollama pull phi3
+   # Or: ollama pull mistral:7b
+   # Or: ollama pull llama3.1:8b
+   # Or: ollama pull tinyllama
    ```
 
-4. **Access the application:**
-   - Frontend: http://localhost:4200
-   - Backend API: http://localhost:8080
-   - AI Service: http://localhost:8000
-
-### Option 2: Manual Setup
-
-#### 1. Python AI Service
+### Start All Services
 
 ```bash
-cd docuintell/ai-service
+cd docuintell
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+# 1. AI Service (Python)
+cd ai-service
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 &
 
-# Run the service
-python main.py
-# Or: uvicorn main:app --host 0.0.0.0 --port 8000
+# 2. Backend (Spring Boot)
+cd ../backend
+mvn spring-boot:run &
+
+# 3. Frontend
+cd ../frontend
+python3 -m http.server 8081 &
 ```
 
-#### 2. MySQL Database
+### Access the Application
+
+| Service    | URL                      |
+|------------|--------------------------|
+| Frontend   | http://localhost:8081    |
+| Backend    | http://localhost:8082    |
+| AI Service | http://localhost:8000    |
+| Ollama     | http://localhost:11434   |
+
+> **Note:** Backend runs on port **8082** because port 8080 may be used by other services (e.g., OpenGrok).
+
+## Configuration
+
+### Change the LLM Model
+
+Edit `ai-service/config.py`:
+
+```python
+class Settings(BaseSettings):
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "phi3"        # <-- Change this
+    upload_dir: str = "./uploads"
+```
+
+**Available models** (pull with `ollama pull <model>`):
+
+| Model | Size | Speed | Quality |
+|-------|------|-------|---------|
+| `tinyllama` | 637 MB | Fastest (~17s) | Lower |
+| `phi3` | 2.2 GB | Fast (~29s) | Good |
+| `llama3.2:3b` | 2.0 GB | Medium | Good |
+| `mistral:7b` | 4.4 GB | Slow (~109s) | Better |
+| `llama3.1:8b` | 4.9 GB | Slowest (~120s) | Best |
+
+After changing the model, restart the AI service:
 
 ```bash
-# Using MySQL 8
-mysql -u root -p < backend/src/main/resources/schema.sql
+pkill -f uvicorn
+cd ai-service && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000 &
 ```
 
-Or update `application.properties` with your database credentials.
+### Change AI Processing Timeouts
 
-#### 3. Spring Boot Backend
+Each AI step (classify, extract, summarize) has its own timeout. Edit these files:
 
-```bash
-cd docuintell/backend
-
-# Build and run
-mvn clean install
-mvn spring-boot:run
+**1. Classifier timeout** — `ai-service/services/classifier.py`:
+```python
+response = httpx.post(
+    f"{settings.ollama_base_url}/api/generate",
+    json={...},
+    timeout=300.0    # <-- Change this (seconds)
+)
 ```
 
-#### 4. Angular Frontend
-
-```bash
-cd docuintell/frontend
-
-# Install Angular CLI if needed
-npm install -g @angular/cli
-
-# Install dependencies
-npm install
-
-# Run development server
-npm start
+**2. Extractor timeout** — `ai-service/services/extractor.py`:
+```python
+response = httpx.post(
+    f"{settings.ollama_base_url}/api/generate",
+    json={...},
+    timeout=300.0    # <-- Change this (seconds)
+)
 ```
 
-Access at http://localhost:4200
+**3. Summarizer timeout** — `ai-service/services/summarizer.py`:
+```python
+response = httpx.post(
+    f"{settings.ollama_base_url}/api/generate",
+    json={...},
+    timeout=300.0    # <-- Change this (seconds)
+)
+```
+
+**4. Backend timeout** — `backend/src/main/resources/application.properties`:
+```properties
+# AI Service
+ai.service.url=http://localhost:8000
+ai.service.timeout=600000          # <-- Change this (milliseconds)
+
+# Server timeouts
+server.servlet.connection-timeout=600000   # <-- Change this
+spring.mvc.async.request-timeout=600000    # <-- Change this
+```
+
+> **Rule of thumb:** Set each AI step timeout to at least **2x** the model's average response time. The backend timeout should be **3x** the total of all 3 AI steps combined.
+
+### Example: Fast Processing with tinyllama
+
+```python
+# ai-service/config.py
+ollama_model: str = "tinyllama"
+
+# ai-service/services/classifier.py, extractor.py, summarizer.py
+timeout=60.0    # 60 seconds per step
+
+# backend/src/main/resources/application.properties
+ai.service.timeout=180000           # 3 minutes total
+server.servlet.connection-timeout=180000
+spring.mvc.async.request-timeout=180000
+```
+
+### Example: High Quality with mistral:7b
+
+```python
+# ai-service/config.py
+ollama_model: str = "mistral:7b"
+
+# ai-service/services/classifier.py, extractor.py, summarizer.py
+timeout=300.0    # 5 minutes per step
+
+# backend/src/main/resources/application.properties
+ai.service.timeout=900000           # 15 minutes total
+server.servlet.connection-timeout=900000
+spring.mvc.async.request-timeout=900000
+```
 
 ## API Endpoints
 
 ### Documents
-- `POST /api/documents/upload` - Upload and process document
-- `GET /api/documents` - List all documents (paginated)
-- `GET /api/documents/{uuid}` - Get document by UUID
-- `DELETE /api/documents/{uuid}` - Delete document
-- `GET /api/documents/stats` - Get dashboard statistics
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/documents/upload` | Upload and process document |
+| GET | `/api/documents` | List all documents |
+| GET | `/api/documents/{id}` | Get document by ID |
+| PUT | `/api/documents/{id}/verify` | Save verification edits |
+| DELETE | `/api/documents/{id}` | Delete document |
+| GET | `/api/documents/stats` | Dashboard statistics |
 
-### Validation
-- `POST /api/validation/{uuid}/approve` - Approve document
-- `POST /api/validation/{uuid}/reject` - Reject document
-- `GET /api/validation/{uuid}/history` - Get validation history
-
-### Search
-- `POST /api/search/semantic` - Semantic search
+### AI Service
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | AI service health check |
+| POST | `/process` | Process uploaded file |
+| POST | `/search` | Search indexed documents |
 
 ### Health
-- `GET /api/health` - Health check
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Full system health check |
 
-## Configuration
+## Processing Pipeline
 
-### AI Service (.env)
-```env
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
-CHROMA_PERSIST_DIRECTORY=./chroma_data
-```
-
-### Backend (application.properties)
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/docuintell_db
-spring.datasource.username=root
-spring.datasource.password=root
-app.ai.service.url=http://localhost:8000
-```
+1. **Upload** → User uploads file via frontend
+2. **Text Extraction** → Instant (PyPDF2 for PDF, docx2txt for DOCX, raw reader for TXT/CSV)
+3. **Classification** → Ollama identifies document type (invoice, contract, resume, etc.)
+4. **Field Extraction** → Ollama extracts structured fields from the document
+5. **Summarization** → Ollama generates a 2-3 sentence summary
+6. **Verification Modal** → User reviews all AI results, can edit any field
+7. **Save** → Edits persisted to database, status set to "processed"
 
 ## Project Structure
 
 ```
 docuintell/
-├── ai-service/           # Python FastAPI
-│   ├── main.py
-│   ├── config.py
-│   ├── models/
+├── ai-service/
+│   ├── config.py                 # Model & timeout settings
+│   ├── main.py                   # FastAPI endpoints
+│   ├── requirements.txt          # Python dependencies
 │   └── services/
-│       ├── preprocessor.py
-│       ├── classifier.py
-│       ├── extractor.py
-│       ├── summarizer.py
-│       ├── vector_store.py
-│       └── document_service.py
+│       ├── preprocessor.py       # Text extraction (PDF, DOCX, TXT, CSV)
+│       ├── classifier.py         # Document type classification
+│       ├── extractor.py          # Field extraction
+│       ├── summarizer.py         # Document summarization
+│       ├── vector_store.py       # Keyword search index
+│       ├── email_reader.py       # IMAP email fetching
+│       └── document_service.py   # Pipeline orchestrator
 │
-├── backend/              # Spring Boot
+├── backend/
 │   ├── pom.xml
 │   └── src/main/java/com/docuintell/
-│       ├── entity/
-│       ├── dto/
-│       ├── repository/
-│       ├── service/
-│       └── controller/
+│       ├── entity/               # JPA entities
+│       ├── dto/                  # Response DTOs
+│       ├── repository/           # Spring Data repositories
+│       ├── service/              # Business logic
+│       └── controller/           # REST endpoints
 │
-├── frontend/             # Angular 17
-│   └── src/app/
-│       ├── core/
-│       │   ├── models/
-│       │   ├── services/
-│       │   └── interceptors/
-│       └── features/
-│           ├── dashboard/
-│           ├── upload/
-│           ├── documents/
-│           ├── document-detail/
-│           ├── review/
-│           └── semantic-search/
+├── frontend/
+│   └── index.html                # Single-page app (HTML + JS)
 │
-├── docker-compose.yml
+├── start.sh                      # Start all services
+├── stop.sh                       # Stop all services
 └── README.md
 ```
 
-## POC Pipeline Flow
+## Supported File Types
 
-1. User opens Angular app → Dashboard shows stats
-2. User goes to Upload → selects file → clicks Upload
-3. Angular POST /api/documents/upload (multipart)
-4. Spring Boot saves file → creates Document(PENDING) → calls Python AI
-5. Python AI processes document:
-   - Preprocessor extracts text
-   - Classifier calls Ollama → gets document type
-   - Extractor calls Ollama → gets structured JSON
-   - Summarizer calls Ollama → gets summary
-   - VectorStore stores in ChromaDB
-6. Spring Boot updates Document with AI results → status=AI_PROCESSED
-7. ValidationService runs automatic rules:
-   - PASS → status=VALIDATED → IntegrationService logs it → status=INTEGRATED
-   - FAIL → status=NEEDS_REVIEW
-8. Angular shows result
+| Type | Extensions | Extractor |
+|------|-----------|-----------|
+| Plain Text | `.txt`, `.md` | Built-in |
+| PDF | `.pdf` | PyPDF2 |
+| Word | `.docx`, `.doc` | docx2txt |
+| CSV | `.csv` | Built-in csv module |
+| Images | `.jpg`, `.png`, `.tiff` | pytesseract (optional) |
 
 ## License
 
-MIT License# Doc-Intelligent
+MIT License
