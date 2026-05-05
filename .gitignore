@@ -1,7 +1,7 @@
 # Python
 ai-service/venv/
-ai-service/__pycache__/
-ai-service/*.pyc
+ai-service/**/__pycache__/
+ai-service/**/*.pyc
 ai-service/*.log
 ai-service/uploads/
 ai-service/chroma_data/
