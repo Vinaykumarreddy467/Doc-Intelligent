@@ -7,13 +7,13 @@ echo "Starting DocuIntell..."
 screen -dmS ollama ollama serve 2>/dev/null
 sleep 3
 
-screen -dmS ai bash -c "cd docuintell/ai-service && source venv/bin/activate && python main.py" 2>/dev/null
+screen -dmS ai bash -c "cd ai-service && source venv/bin/activate && python main.py" 2>/dev/null
 sleep 4
 
-screen -dmS backend bash -c "cd docuintell/backend && mvn spring-boot:run" 2>/dev/null
+screen -dmS backend bash -c "cd backend && mvn spring-boot:run" 2>/dev/null
 sleep 18
 
-screen -dmS frontend bash -c "cd docuintell/frontend && python3 -m http.server 8081" 2>/dev/null
+screen -dmS frontend bash -c "cd frontend-react && npm run dev -- --host 0.0.0.0 --port 8081" 2>/dev/null
 sleep 2
 
 echo ""

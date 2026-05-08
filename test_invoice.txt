@@ -1,0 +1,7 @@
+Invoice #INV-2023-001
+Date: October 25, 2023
+Vendor: Acme Corp
+Total Amount: $500.00
+Items:
+- 10x Widgets
+- 5x Gadgets
