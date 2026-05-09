@@ -28,7 +28,7 @@ function App() {
     if (activeTab === 'dashboard') {
       fetchStats();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchStats]);
 
   return (
     <div className="min-h-screen flex flex-col bg-darker text-slate-200 relative overflow-hidden">
@@ -67,9 +67,9 @@ function App() {
       </header>
 
       <main className="flex-grow p-6 max-w-7xl mx-auto w-full relative z-10 animate-slide-up">
-        {activeTab === 'dashboard' && <Dashboard stats={stats} />}
+        {activeTab === 'dashboard' && <Dashboard stats={stats} onStatsUpdate={fetchStats} />}
         {activeTab === 'documents' && <DocumentList />}
-        {activeTab === 'upload' && <UploadArea />}
+        {activeTab === 'upload' && <UploadArea onUploadComplete={() => setActiveTab('dashboard')} />}
       </main>
     </div>
   );

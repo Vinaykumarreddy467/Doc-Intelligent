@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, CheckCircle, Trash2, Search, X, FileText } from 'lucide-react';
+import { Eye, CheckCircle, Trash2, Search, X, FileText, Clock } from 'lucide-react';
 import VerificationModal from './VerificationModal';
 
 const DocumentList = () => {
@@ -43,7 +43,7 @@ const DocumentList = () => {
     if (hasProcessing) {
       intervalId = setInterval(() => {
         fetchDocs();
-      }, 3000); // poll every 3 seconds
+      }, 3000);
     }
     
     return () => {
@@ -118,10 +118,20 @@ const DocumentList = () => {
     );
   };
 
+  // Extract search results from the response
+  const getSearchResultsList = () => {
+    if (!searchResults) return [];
+    // Could be { results: [...] } or { documents: [...] } or an array
+    if (Array.isArray(searchResults)) return searchResults;
+    if (searchResults.results) return searchResults.results;
+    if (searchResults.documents) return searchResults.documents;
+    return [];
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Search Section */}
-      <div className="glass-panel p-6 border border-slate-700/50 shadow-lg mb-8">
+      <div className="glass-panel p-6 border border-slate-700/50 shadow-lg">
         <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
           <Search size={20} className="text-primary" /> Semantic Search
         </h3>
@@ -156,28 +166,29 @@ const DocumentList = () => {
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Search Results</h4>
               <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded-md border border-indigo-500/30">
-                {searchResults.results ? searchResults.results.length : 0} found
+                {getSearchResultsList().length} found
               </span>
             </div>
             
             <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
-              {(!searchResults.results || searchResults.results.length === 0) ? (
+              {getSearchResultsList().length === 0 ? (
                 <div className="text-center p-6 bg-slate-900/50 rounded-xl border border-slate-700/50 text-slate-500 italic">
                   No documents found matching your query.
                 </div>
               ) : (
-                searchResults.results.map((result, idx) => (
+                getSearchResultsList().map((result, idx) => (
                   <div key={idx} className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4 hover:border-primary/40 transition-colors group cursor-pointer" onClick={() => viewDocument(result.id)}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium text-slate-200 group-hover:text-primary transition-colors flex items-center gap-2">
-                        <FileText size={16} className="text-slate-400" /> {result.filename || 'Unknown Document'}
+                        <FileText size={16} className="text-slate-400" /> {result.filename || result.title || 'Unknown Document'}
                       </div>
                       <div className="text-xs font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
-                        Score: {result.score || 0}
+                        Score: {result.score || result.similarityScore || 0}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-3">
-                      <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-md uppercase tracking-wider">{result.type || 'unknown'}</span>
+                      <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-md uppercase tracking-wider">{result.type || result.documentType || 'unknown'}</span>
+                      <span className="text-xs text-slate-500 flex items-center gap-1"><Clock size={12} /> {result.createdAt ? new Date(result.createdAt).toLocaleDateString() : ''}</span>
                     </div>
                   </div>
                 ))
@@ -186,69 +197,99 @@ const DocumentList = () => {
           </div>
         )}
       </div>
+
+      {/* Documents Table */}
       <h2 className="text-2xl font-semibold text-slate-100 flex items-center gap-2">
         <span className="w-2 h-8 rounded-full bg-secondary inline-block"></span>
         All Documents
       </h2>
       <div className="glass-panel overflow-hidden">
         {loading ? (
-           <div className="p-12 text-center text-slate-400 animate-pulse">Loading documents...</div>
+          <div className="p-12 text-center text-slate-400 animate-pulse">Loading documents...</div>
         ) : docs.length === 0 ? (
-           <div className="p-12 text-center text-slate-500">No documents found.</div>
+          <div className="p-12 text-center text-slate-500">No documents found. Upload your first document!</div>
         ) : (
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-800/50 border-b border-slate-700/50">
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-12">#</th>
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Filename</th>
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Type</th>
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Confidence</th>
-              <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((doc, index) => (
-              <tr key={doc.id} className="border-b border-slate-700/30 hover:bg-slate-800/40 transition-colors group">
-                <td className="p-4 font-medium text-slate-500">{index + 1}</td>
-                <td className="p-4 font-medium text-slate-200 flex items-center gap-2">
-                  {doc.filename}
-                  {doc.status === 'processing' && (
-                    <div className="animate-spin h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full" title="Processing..."></div>
-                  )}
-                </td>
-                <td className="p-4 text-slate-400 capitalize">{doc.documentType || '-'}</td>
-                <td className="p-4"><StatusBadge status={doc.status} /></td>
-                <td className="p-4 text-slate-400">{doc.confidence ? (doc.confidence * 100).toFixed(0) + '%' : '-'}</td>
-                <td className="p-4 flex gap-3 justify-end opacity-70 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => viewDocument(doc.id)} 
-                    className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-400/10 transition-colors rounded-lg border border-transparent hover:border-indigo-400/30"
-                    title="View Details"
-                  >
-                    <Eye size={18}/>
-                  </button>
-                  {doc.status === 'needs_review' && (
-                    <button 
-                      onClick={() => { setSelectedDocId(doc.id); setModalMode('verify'); setIsModalOpen(true); }}
-                      className="p-2 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors rounded-lg border border-transparent hover:border-amber-400/30"
-                      title="Review"
-                    >
-                      <CheckCircle size={18}/>
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => handleDelete(doc.id)} 
-                    className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 transition-colors rounded-lg border border-transparent hover:border-rose-400/30"
-                    title="Delete"
-                  >
-                    <Trash2 size={18}/>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-800/50 border-b border-slate-700/50">
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-12">#</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Filename</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Type</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Source</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Confidence</th>
+                  <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {docs.map((doc, index) => (
+                  <tr key={doc.id} className="border-b border-slate-700/30 hover:bg-slate-800/40 transition-colors group">
+                    <td className="p-4 font-medium text-slate-500">{index + 1}</td>
+                    <td className="p-4 font-medium text-slate-200">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-slate-500 shrink-0" />
+                        <span className="truncate max-w-[200px]">{doc.filename}</span>
+                        {doc.status === 'processing' && (
+                          <div className="animate-spin h-3.5 w-3.5 border-2 border-primary border-t-transparent rounded-full shrink-0" title="Processing..."></div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-slate-400 capitalize">{doc.documentType || '-'}</td>
+                    <td className="p-4">
+                      <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-md uppercase tracking-wider">{doc.fileType || 'file'}</span>
+                    </td>
+                    <td className="p-4"><StatusBadge status={doc.status} /></td>
+                    <td className="p-4">
+                      {doc.confidence != null ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${
+                                doc.confidence >= 0.7 ? 'bg-emerald-400' : 
+                                doc.confidence >= 0.4 ? 'bg-amber-400' : 'bg-rose-400'
+                              }`}
+                              style={{ width: `${doc.confidence * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-mono text-slate-400">{(doc.confidence * 100).toFixed(0)}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-600">-</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-2 justify-end opacity-70 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => viewDocument(doc.id)} 
+                          className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-400/10 transition-colors rounded-lg border border-transparent hover:border-indigo-400/30"
+                          title="View Details"
+                        >
+                          <Eye size={18}/>
+                        </button>
+                        {doc.status === 'needs_review' && (
+                          <button 
+                            onClick={() => { setSelectedDocId(doc.id); setModalMode('verify'); setIsModalOpen(true); }}
+                            className="p-2 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors rounded-lg border border-transparent hover:border-amber-400/30"
+                            title="Review"
+                          >
+                            <CheckCircle size={18}/>
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => handleDelete(doc.id)} 
+                          className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 transition-colors rounded-lg border border-transparent hover:border-rose-400/30"
+                          title="Delete"
+                        >
+                          <Trash2 size={18}/>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

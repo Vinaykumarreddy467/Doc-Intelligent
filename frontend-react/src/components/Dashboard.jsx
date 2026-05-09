@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, Activity } from 'lucide-react';
 
-const Dashboard = ({ stats }) => {
+const Dashboard = ({ stats, onStatsUpdate }) => {
   const [recentDocs, setRecentDocs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(true);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8082/api';
 
@@ -23,11 +25,26 @@ const Dashboard = ({ stats }) => {
     }
   }, [API_URL]);
 
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/health`);
+      const json = await res.json();
+      if (json.success) {
+        setHealth(json.data);
+      }
+    } catch (e) {
+      setHealth({ backend: 'unavailable', aiService: 'unavailable' });
+    } finally {
+      setHealthLoading(false);
+    }
+  }, [API_URL]);
+
   useEffect(() => {
     fetchRecent();
-  }, [fetchRecent]);
+    fetchHealth();
+  }, [fetchRecent, fetchHealth]);
 
-  // Auto-polling if any document is processing
+  // Auto-poll if any document is processing
   useEffect(() => {
     const hasProcessing = recentDocs.some(doc => doc.status === 'processing');
     let intervalId;
@@ -35,13 +52,14 @@ const Dashboard = ({ stats }) => {
     if (hasProcessing) {
       intervalId = setInterval(() => {
         fetchRecent();
-      }, 3000); // poll every 3 seconds
+        onStatsUpdate();
+      }, 3000);
     }
     
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [recentDocs, fetchRecent]);
+  }, [recentDocs, fetchRecent, onStatsUpdate]);
 
   const StatusBadge = ({ status }) => {
     const styles = {
@@ -57,21 +75,58 @@ const Dashboard = ({ stats }) => {
     );
   };
 
+  const HealthIndicator = ({ label, status }) => {
+    const isOk = status === 'healthy' || status === 'ok';
+    return (
+      <div className="flex items-center gap-3 bg-slate-800/30 p-3 rounded-xl border border-slate-700/30">
+        <div className={`w-3 h-3 rounded-full ${isOk ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]'} animate-pulse-slow`}></div>
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase tracking-widest">{label}</div>
+          <div className={`text-sm font-medium ${isOk ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {status || 'unknown'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* API Health */}
       <section>
         <h2 className="text-2xl font-semibold text-slate-100 flex items-center gap-2 mb-6">
           <span className="w-2 h-8 rounded-full bg-primary inline-block"></span>
           Overview
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatCard title="Total Documents" value={stats.total || 0} color="from-blue-500 to-indigo-500" />
-          <StatCard title="Processed" value={stats.processed || 0} color="from-emerald-400 to-teal-500" />
-          <StatCard title="Needs Review" value={stats.needs_review || 0} color="from-amber-400 to-orange-500" />
-          <StatCard title="Failed" value={stats.failed || 0} color="from-rose-500 to-red-600" />
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+          <div className="md:col-span-1">
+            {healthLoading ? (
+              <div className="glass-card p-4 animate-pulse">
+                <div className="h-16 bg-slate-700/50 rounded-xl"></div>
+              </div>
+            ) : health ? (
+              <div className="glass-card p-4 space-y-2">
+                <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest mb-2">
+                  <Activity size={14} /> API Health
+                </div>
+                <HealthIndicator label="Backend" status={health.backend} />
+                <HealthIndicator label="AI Service" status={health.aiService} />
+                {health.model && (
+                  <div className="text-[10px] text-slate-500 mt-1">Model: {health.model}</div>
+                )}
+              </div>
+            ) : null}
+          </div>
+          <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-4 gap-6">
+            <StatCard title="Total Documents" value={stats.total || 0} color="from-blue-500 to-indigo-500" />
+            <StatCard title="Processed" value={stats.processed || 0} color="from-emerald-400 to-teal-500" />
+            <StatCard title="Needs Review" value={stats.needs_review || 0} color="from-amber-400 to-orange-500" />
+            <StatCard title="Failed" value={stats.failed || 0} color="from-rose-500 to-red-600" />
+          </div>
         </div>
       </section>
 
+      {/* Recent Documents */}
       <section>
         <h2 className="text-2xl font-semibold text-slate-100 flex items-center gap-2 mb-6">
           <span className="w-2 h-8 rounded-full bg-secondary inline-block"></span>
@@ -81,7 +136,7 @@ const Dashboard = ({ stats }) => {
           {loading ? (
             <div className="p-12 text-center text-slate-400 animate-pulse">Loading recent documents...</div>
           ) : recentDocs.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">No recent documents.</div>
+            <div className="p-12 text-center text-slate-500">No documents yet. Upload your first document!</div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
@@ -105,7 +160,7 @@ const Dashboard = ({ stats }) => {
                     </td>
                     <td className="p-4 text-slate-400 capitalize">{doc.documentType || '-'}</td>
                     <td className="p-4"><StatusBadge status={doc.status} /></td>
-                    <td className="p-4 text-slate-400 text-sm flex items-center gap-1 h-full"><Clock size={14} /> {new Date(doc.createdAt).toLocaleDateString()}</td>
+                    <td className="p-4 text-slate-400 text-sm flex items-center gap-1"><Clock size={14} /> {new Date(doc.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
