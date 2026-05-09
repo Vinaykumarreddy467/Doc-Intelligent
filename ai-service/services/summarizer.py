@@ -6,12 +6,17 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 def summarize_document(text: str) -> str:
-    """Summarize document using Ollama"""
-    prompt = f"""Summarize the following document in 2-3 sentences:
+    """Generate a concise summary of the document using Ollama"""
+    
+    text_sample = text[:5000] if text else ""
+    
+    prompt = f"""Read the document below and write a clear, informative summary (2-4 sentences).
+Focus on: what the document IS (type), who it involves, key dates, and important figures/amounts.
 
-{text[:3000]}
+DOCUMENT:
+{text_sample}
 
-Summary:"""
+SUMMARY:"""
 
     try:
         response = httpx.post(
@@ -21,14 +26,22 @@ Summary:"""
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.3,
-                    "num_predict": 200
+                    "temperature": 0.1,
+                    "num_predict": 250
                 }
             },
             timeout=300.0
         )
         result = response.json()
-        return result.get("response", "").strip()
+        summary = result.get("response", "").strip()
+        
+        # Clean up the summary
+        if summary.startswith("SUMMARY:"):
+            summary = summary[8:].strip()
+        if summary.startswith('"') and summary.endswith('"'):
+            summary = summary[1:-1]
+        
+        return summary
         
     except Exception as e:
         logger.error(f"Summarization error: {e}")
